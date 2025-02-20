@@ -25,9 +25,14 @@ Refer to **[setup-notes.txt](setup-notes.txt)** for a step-by-step guide on:
 - Adding the required API configurations.  
 - Ensuring compatibility with existing modules.  
 
-## Demo  
+## Demo  Video
 
-Watch the **feature demo video** here: [https://youtu.be/IkS6pNHPj8c](https://youtu.be/IkS6pNHPj8c)]  
+Watch the **feature demo video** here: 
+GroupOffice with GenAI – Email Summarization & Content Generation Demo.
+[https://youtu.be/IkS6pNHPj8c](https://youtu.be/IkS6pNHPj8c)
+This demo showcases the new GenAI-powered features added to GroupOffice Community using the Groq API. 
+Watch how AI summarizes emails for quick insights and assists in generating well-crafted email responses. 
+A practical upgrade for enhanced productivity within GroupOffice.
 
 ## License  
 
