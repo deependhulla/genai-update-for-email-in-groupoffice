@@ -1,0 +1,325 @@
+Tested with Latest GroupOffice on Debian 12 & Ubuntu with deb package installation.
+
+First to start with:
+
+Backup Important Files
+
+Run the following commands to create a backup of the necessary files before making changes:
+
+mkdir /opt/groupoffice-orginal-key-file-backup
+/bin/cp -pRv /usr/share/groupoffice/modules/email/controller/MessageController.php /opt/groupoffice-orginal-key-file-backup/MessageController-`date +%s`-backup.php
+/bin/cp -pRv /usr/share/groupoffice/modules/email/EmailClient.js /opt/groupoffice-orginal-key-file-backup/EmailClient-`date +%s`-backup.js
+/bin/cp -pRv /usr/share/groupoffice/modules/email/MessagePanel.js /opt/groupoffice-orginal-key-file-backup/MessagePanel-`date +%s`-backup.js
+/bin/cp -pRv /usr/share/groupoffice/views/Extjs3/javascript/form/HtmlEditor.js /opt/groupoffice-orginal-key-file-backup/HtmlEditor.js-`date +%s`-backup.js
+/bin/cp -pRv /usr/share/groupoffice/views/Extjs3/javascript/scripts.txt /opt/groupoffice-orginal-key-file-backup/scripts-`date +%s`-backup.txt
+/bin/cp -pRv /usr/share/groupoffice/controller/CoreController.php /opt/groupoffice-orginal-key-file-backup/CoreController-`date +%s`-backup.php
+
+-------------
+Modify MessageController.php
+
+Now In the File : /usr/share/groupoffice/modules/email/controller/MessageController.php
+Search for "actionGet" and you would Find Line/Content Like below : 
+
+protected function actionGet($account_id, $mailbox, $uid, $query="")
+
+After searching (actionGet);  Insert the provided code just above this line.
+
+/////////////////////////////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////////////////////////////
+public function actionSummary(array $params): array
+{    
+$params['filterXSS']=true;$params['unblock']=true;   
+$params['no_max_body_size'] = !empty($params['no_max_body_size']) && $params['no_max_body_size']!=='false';
+$account = Account::model()->findByPk($params['account_id']);
+ if(!$account) {
+        throw new NotFound();
+             }
+  $customHeaders = !empty($params['customHeaders']) ? explode(',', $params['customHeaders']) : [];
+  $imapMessage = ImapMessage::model()->findByUid($account, $params['mailbox'], $params['uid'], $customHeaders);
+  if(!$imapMessage) {
+           throw new NotFound();
+       }
+      if(!empty($params['create_blobs'])) {
+         $imapMessage->createBlobsForAttachments();
+      } elseif(!empty($params['create_temporary_attachments'])) {
+         $imapMessage->createTempFilesForAttachments();
+      } 
+     $imapMessage->autoLink();
+     $plaintext = !empty($params['plaintext']);
+     $response = $imapMessage->toOutputArray(!$plaintext,false,$params['no_max_body_size']);
+     foreach($customHeaders as $customHeader) {
+           $response[$customHeader] = $imapMessage->{strtolower(str_replace("-", "_", $customHeader))} ?? null;
+        }
+ $response['uid'] = intval($params['uid']);
+     $response['mailbox'] = $params['mailbox'];
+     $response['isDraft'] = $params['mailbox'] == $account->drafts;
+     $response['account_id'] = intval($params['account_id']);
+     $response['do_not_mark_as_read'] = $account->do_not_mark_as_read;
+     $response = $this->_getContactInfo($imapMessage, $params, $response, $account);
+     if (!$plaintext) {
+      if(empty($response['sender_contact_id']) && $params['mailbox']!=$account->sent && $params['mailbox']!=$account->drafts) {
+              $response = $this->_checkXSS($params, $response);
+        }
+        $response = $this->_blockImages($params, $response);
+        $response = $this->_handleInvitations($imapMessage, $params, $response);
+         }
+        $response['isInSpamFolder']=$response['mailbox'] == $account->spam;
+                                                // START Handle the links div in the email display panel                
+        if(!$plaintext){
+         $linkedModels = $imapMessage->getLinks();
+         $response['links'] = array();
+        foreach($linkedModels as $linkedModel){
+        $link = $linkedModel->getAttributes();
+        $entityType = \go\core\orm\EntityType::findById($linkedModel->entityTypeId);
+        if($entityType) {
+        $link['entity'] = $entityType->getName();
+        $response['links'][] = $link;
+           }  } }
+  // END OF Handle the links div in the email display panel
+       $this->fireEvent('view', array(
+          &$this,
+          &$response,
+          $imapMessage,
+          $account,
+          $params
+          ));
+
+  /// some dirty way to clean up html code and blank space and lines to avoid bandwsith and token size 
+  $htmlbodyai=strip_tags($response['htmlbody']); $htmlbodyai=html_entity_decode($htmlbodyai);
+  $htmlbodyai = preg_replace('/[^\x20-\x7E]/', '', $htmlbodyai);
+  $htmlbodyai=str_replace("&nbsp;"," ",$htmlbodyai);$htmlbodyai=str_replace("  "," ",$htmlbodyai);
+  $htmlbodyai=str_replace("  "," ",$htmlbodyai);$htmlbodyai=str_replace("  "," ",$htmlbodyai);
+  $htmlbodyai=str_replace("  "," ",$htmlbodyai);$htmlbodyai=str_replace("  "," ",$htmlbodyai);
+  $htmlbodyai=str_replace("  "," ",$htmlbodyai);$htmlbodyai=str_replace("  "," ",$htmlbodyai);
+  $htmlbodyai=str_replace("\r\n\r\n","\r\n",$htmlbodyai);$htmlbodyai=str_replace("\r\n\r\n","\r\n",$htmlbodyai);
+  $htmlbodyai=str_replace("\r\n\r\n","\r\n",$htmlbodyai);$htmlbodyai=str_replace("\r\n\r\n","\r\n",$htmlbodyai);
+  $htmlbodyai=str_replace("\r","\n",$htmlbodyai);$htmlbodyai=str_replace("\n\n","\n",$htmlbodyai);
+  $htmlbodyai=str_replace("\n\n","\n",$htmlbodyai);$htmlbodyai=str_replace(" \n","\n",$htmlbodyai);
+  $htmlbodyai=str_replace("\n\n","\n",$htmlbodyai);$htmlbodyai=str_replace("\n\n","\n",$htmlbodyai);
+  $htmlbodyai=str_replace("\n\n","\n",$htmlbodyai);$htmlbodyai=str_replace("\n\n","\n",$htmlbodyai);
+  $htmlbodyai=str_replace("\n\n","\n",$htmlbodyai);$htmlbodyai=preg_replace('/^\s*$/m', '', $htmlbodyai);
+  $htmlbodyai=preg_replace('/^[\s]*$/m', '', $htmlbodyai);$htmlbodyai=preg_replace('/^[ ]+$/m', '', $htmlbodyai);
+  $htmlbodyai=preg_replace('/^[ ]+(\r?\n)/m', '', $htmlbodyai);$htmlbodyai=preg_replace('/\n\s*\n/', "\n", $htmlbodyai);
+  $htmlbodyai=preg_replace('/^\s*[\r\n]+/m', '', $htmlbodyai);;
+  
+      $promptai = "Summarize this email in one or two lines and yet keep too short:\n";
+      $promptai .= "From: ".$response['from']."\nSubject: ".$response['subject']."\nBody: " .$htmlbodyai. "\n";
+      $urlai = GO::config()->ai_url;
+      $api_keyai=GO::config()->ai_api_key;
+      $modelai = GO::config()->ai_model;
+      $dataai = [
+          "model" => $modelai,
+          "messages" => [["role" => "system", "content" => "You are an AI that summarizes emails concisely."],
+                         ["role" => "user", "content" => $promptai]],
+          "max_tokens" => 150
+      ];
+      $headersai = ['Content-Type: application/json'];
+      $headersai[] = 'Authorization: Bearer ' . $api_keyai;
+      $chai = curl_init($urlai);
+      curl_setopt($chai, CURLOPT_RETURNTRANSFER, true);
+      curl_setopt($chai, CURLOPT_POST, true);
+      curl_setopt($chai, CURLOPT_HTTPHEADER, $headersai);
+      curl_setopt($chai, CURLOPT_POSTFIELDS, json_encode($dataai));
+      $responsex = curl_exec($chai);
+      curl_close($chai);
+      $response_datax = json_decode($responsex, true);
+      $response_dataai=$response_datax['choices'][0]['message']['content'] ?? 'Summarization failed.';
+      $response1['full_debug_content']=$response_datax;
+      $response1['full_debug_promptai']=$promptai;
+      $response1['summary_content']=$response_dataai;
+      $response1['success'] = true;
+          return $response1;
+  }
+
+  /////////////////////////////////////////////////////////////////////////////////
+  /////////////////////////////////////////////////////////////////////////////////
+
+----------------
+Modify EmailClient.js
+
+Now In the File : /usr/share/groupoffice/modules/email/EmailClient.js
+
+Search for "moveToInbox" and you would Find Line/Content Like below : 
+
+GO.email.moveToInbox = function(mailUid,fromAccountId) {
+
+After searching (moveToInbox)  ; Insert the provided code just above this line.
+
+
+////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////
+
+GO.email.EmailSummarizeChat = function(mailUid,mailboxName,fromAccountId,bodyId) {
+params={},
+params['no_max_body_size']=true;
+params['account_id']=fromAccountId;
+params['mailbox']=mailboxName;
+params['uid']=mailUid;
+//console.log(params);
+var xtitle='message-summary-view-'+bodyId;
+document.getElementById(xtitle).innerHTML ='Asking AI...';
+ GO.request({
+    url: "email/message/summary",
+    params: {
+        account_id:fromAccountId,
+        uid:mailUid,
+        mailbox:mailboxName
+        },
+        scope: this,
+  success: function(options, response, data)
+        {
+        document.getElementById(xtitle).innerHTML =data['summary_content'];
+        },
+   fail: function(response, options, result) {
+        document.getElementById(xtitle).innerHTML ='Asking AI...Opps...taking long..';
+       Ext.Msg.alert(t("Error"), result ? result.feedback : t('An error occurred. More details can be found in the console.'));
+       }
+  });
+
+//////over loop
+}
+////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////
+--------------
+Modify MessagePanel.js
+
+Now In the file : /usr/share/groupoffice/modules/email/MessagePanel.js
+
+Search for "isInSpamFolder" and you would Find Line/Content Like below : 
+
+templateStr += '<tpl if="values.isInSpamFolder==\'1\';">'+
+
+After searching (isInSpamFolder);   Insert the provided code just above this line.
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+templateStr += '<div style="background-color:#eeeeee;color:#000000;border-style: dotted;padding:4px;" class="message-summary-view" ';
+templateStr += ' id="message-summary-view-'+this.bodyId+'" name="message-summary-view-'+this.bodyId+'"> ';
+templateStr += ' <a id="em-move-mail-link-'+this.bodyId+'" class="normal-link" style="background-repeat:no-repeat;" ';
+templateStr += ' onclick="GO.email.EmailSummarizeChat(\'{values.uid}\',\'{values.mailbox}\',\'{values.account_id}\',\''+this.bodyId+'\');" >';
+templateStr += 'Summarize this email</a></div>';
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+-------------------
+Copy the new JavaScript file
+
+Copy HTMLEditorWriterAI.js to the plugins directory:
+/usr/share/groupoffice/views/Extjs3/javascript/plugins/
+
+Ensure the path looks like this:
+
+/usr/share/groupoffice/views/Extjs3/javascript/plugins/HTMLEditorWriterAI.js 
+
+---------------------
+Modify scripts.txt
+
+Now In the File : /usr/share/groupoffice/views/Extjs3/javascript/scripts.txt
+Search for "Plugins" and you would Find Line/Content Like below : 
+
+views/Extjs3/javascript/plugins/Ext.ux.HtmlEditor.Plugins-0.2-all.js
+
+After searching (Plugins)  Add the following line just after the found line:
+
+views/Extjs3/javascript/plugins/HTMLEditorWriterAI.js
+
+it would look like below ---
+views/Extjs3/javascript/plugins/Ext.ux.HtmlEditor.Plugins-0.2-all.js
+views/Extjs3/javascript/plugins/HTMLEditorWriterAI.js
+
+save the scripts.txt
+
+/usr/share/groupoffice/controller/CoreController.php
+
+-----------------------------
+Modify HtmlEditor.js
+
+Now in  file : /usr/share/groupoffice/views/Extjs3/javascript/form/HtmlEditor.js
+
+Search for "HtmlEditor.superclass.constructor" and you would Find Line/Content Like below : 
+
+GO.form.HtmlEditor.superclass.constructor.call(this, config);
+
+Now after searching (HtmlEditor.superclass.constructor)  JUST BEFORE THIS FOUND LINE, add the code given below.
+
+///////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////
+var writerAIPlugin = new Ext.ux.form.HtmlEditor.WriterAI();
+                config.plugins.unshift(writerAIPlugin);
+///////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////
+
+
+Search for "actionSpellCheck" and you would Find Line/Content Like below : 
+
+protected function actionSpellCheck($params) {
+
+After searching (actionSpellCheck)  Insert the provided code just above this line.
+
+//////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////
+protected function actionWriterAi($params) {
+$askaitext=$params['askaitextvalue'];
+$promptai = "Generate a Email Content only ,no markdown format, without saying what you did, ";
+$promptai .= "no need to answer the question asked in the content, just make the content grammar good and professional, ";
+$promptai .= "No need to write dear or thank you or regards ::\n";
+$promptai .= $askaitext."\n"; $urlai = GO::config()->ai_url; 
+$api_keyai=GO::config()->ai_api_key;  $modelai = GO::config()->ai_model;
+
+$dataai = [           
+  "model" => $modelai,
+  "messages" => [["role" => "system", "content" => "You write clear, polite, and easy-to-understand content in simple English and generate the output as a Text Only."],
+                ["role" => "user", "content" => $promptai]],
+  "max_tokens" => 150
+  ];
+ $headersai = ['Content-Type: application/json'];
+ $headersai[] = 'Authorization: Bearer ' . $api_keyai;
+    $chai = curl_init($urlai);
+    curl_setopt($chai, CURLOPT_RETURNTRANSFER, true);
+    curl_setopt($chai, CURLOPT_POST, true);
+    curl_setopt($chai, CURLOPT_HTTPHEADER, $headersai);
+    curl_setopt($chai, CURLOPT_POSTFIELDS, json_encode($dataai));
+    $responsex = curl_exec($chai);
+    curl_close($chai); 
+     $response_datax = json_decode($responsex, true);
+    $response_dataai=$response_datax['choices'][0]['message']['content'] ?? 'Summarization failed.';
+    $response_dataai=str_replace("\n*","<br>*",$response_dataai);
+                return $response_dataai;
+        }
+//////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////
+
+
+------------------
+Configure OpenAI-compatible Groq API
+
+Finally, to add the OpenAI-compatible Groq API, its API key, and model to the config.php file of GroupOffice, 
+you need to register and generate your own company or personal API key. 
+Start by using the free API key first (register using google login), and later obtain a paid key for real use.
+URL : https://console.groq.com/keys
+ 
+/etc/groupoffice/config.php
+
+$config['ai_url'] = 'https://api.groq.com/openai/v1/chat/completions';
+$config['ai_api_key'] = 'your_api_key_from_console';
+$config['ai_model'] = "llama-3.3-70b-versatile";
+
+
+------------------------
+
+After making the changes, clear the cache to rebuild the JavaScript files. Use one of the following URLs:
+
+Example https://mail.yourdomainame.com/groupoffice/install/upgrade.php?confirmed=1
+or with IP like : 
+http://198.168.1.10/groupoffice/install/upgrade.php?confirmed=1
+
+
+Watch the Video Demo : 
+For a demonstration, visit: : https://youtu.be/IkS6pNHPj8c
+This demo showcases the new GenAI-powered features added to GroupOffice Community using the Groq API. 
+Watch how AI summarizes emails for quick insights and assists in generating well-crafted email responses. 
+A practical upgrade for enhanced productivity within GroupOffice.
+
+
+
