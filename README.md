@@ -16,7 +16,7 @@ This repository provides an update to **GroupOffice Community** by integrating *
 ### 1. Prerequisites  
 - A working **GroupOffice Community** installation.  
 - **PHP 8+** and required dependencies.  
-- An active **Groq API key** ([Get it here](https://groq.com/)).  
+- An active **Groq API key** ([Get it here](https://groq.com/).  
 
 ### 2. Setup & Patching  
 
