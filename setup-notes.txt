@@ -86,7 +86,9 @@ $account = Account::model()->findByPk($params['account_id']);
           ));
 
   /// some dirty way to clean up html code and blank space and lines to avoid bandwsith and token size 
-  $htmlbodyai=strip_tags($response['htmlbody']); $htmlbodyai=html_entity_decode($htmlbodyai);
+  $htmlbodyai=$response['htmlbody']; 
+  $htmlbodyai = preg_replace('/<style\b[^>]*>(.*?)<\/style>/is', '', $htmlbodyai); // Remove <style> content 
+  $htmlbodyai=strip_tags($htmlbodyai); $htmlbodyai=html_entity_decode($htmlbodyai);
   $htmlbodyai = preg_replace('/[^\x20-\x7E]/', '', $htmlbodyai);
   $htmlbodyai=str_replace("&nbsp;"," ",$htmlbodyai);$htmlbodyai=str_replace("  "," ",$htmlbodyai);
   $htmlbodyai=str_replace("  "," ",$htmlbodyai);$htmlbodyai=str_replace("  "," ",$htmlbodyai);
