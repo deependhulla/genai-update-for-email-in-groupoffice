@@ -23,7 +23,8 @@ This repository provides an update to **GroupOffice Community** by integrating *
 Refer to **[setup-notes.txt](setup-notes.txt)** for a step-by-step guide on:  
 - Patching GroupOffice to integrate this addon.  
 - Adding the required API configurations.  
-- Ensuring compatibility with existing modules.  
+- Ensuring compatibility with existing modules.
+- I have created a setup-notes.txt file containing code instead of using .patch files for various files. The reason is that GroupOffice updates frequently, and maintaining patch files for each version can be challenging and may lead to issues. This notes file will help developers or IT personnel search for and add the necessary code more easily.
 
 ## Demo  Video
  
@@ -35,6 +36,4 @@ Refer to **[setup-notes.txt](setup-notes.txt)** for a step-by-step guide on:
 Watch how AI summarizes emails for quick insights and assists in generating well-crafted email responses. 
 A practical upgrade for enhanced productivity within GroupOffice.
 
-## License  
 
-This project follows the **MIT License**.  
