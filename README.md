@@ -28,7 +28,7 @@ Refer to **[setup-notes.txt](setup-notes.txt)** for a step-by-step guide on:
 
 ## Demo  Video
  
-** GroupOffice with GenAI – Email Summarization & Content Generation Demo.**
+**GroupOffice with GenAI – Email Summarization & Content Generation Demo.**
 
 [https://youtu.be/IkS6pNHPj8c](https://youtu.be/IkS6pNHPj8c)
 
