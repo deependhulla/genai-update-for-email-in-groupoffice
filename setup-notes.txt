@@ -232,8 +232,6 @@ views/Extjs3/javascript/plugins/HTMLEditorWriterAI.js
 
 save the scripts.txt
 
-/usr/share/groupoffice/controller/CoreController.php
-
 -----------------------------
 Modify HtmlEditor.js
 
@@ -253,6 +251,7 @@ var writerAIPlugin = new Ext.ux.form.HtmlEditor.WriterAI();
 ///////////////////////////////////////////////////////////////////
 
 
+Now in File : /usr/share/groupoffice/controller/CoreController.php
 Search for "actionSpellCheck" and you would Find Line/Content Like below : 
 
 protected function actionSpellCheck($params) {
